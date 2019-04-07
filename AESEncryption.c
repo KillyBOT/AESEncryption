@@ -8,50 +8,32 @@
 
 typedef unsigned char byte;
 
-
-
 byte GFMult(byte, byte);
 byte GFExp(byte, byte);
 byte GFFastMult(byte, byte, byte*, byte*);
 byte GFInv(byte, byte*);
 
-
-
 byte* createGFExpTable(byte);
 byte* createGFLogTable(byte);
 byte* createGFInvTable(byte*, byte*);
 
-
-
 void printGFTable(byte*);
-void writeGFInvTable(char*,byte*);
+void writeGFInvTable(char*);
 byte* readGFInvTable(char*);
 
 
 int main(){
     byte test1 = 0xb6;
     byte test2 = 0x53;
-    byte* expTable;
-    byte* logTable;
     byte* invTable;
 
-    printf("%x\t%x\n",GFMult(test1, test2), GFExp(0x03,0x02));
+    //printf("%x\t%x\n",GFMult(test1, test2), GFExp(0x03,0x02));
 
-    printf("%d\n",sizeof(byte));
+    invTable = readGFInvTable("AESInvTable.txt");
 
-    expTable = createGFExpTable(GENERATOR);
-    logTable = createGFLogTable(GENERATOR);
-    invTable = createGFInvTable(expTable, logTable);
-
-    writeGFInvTable("test.txt", invTable);
-    invTable = readGFInvTable("test.txt");
-
-    //printGFTable(expTable);
-    //printGFTable(logTable);
     printGFTable(invTable);
+    printf("%d\n",sizeof(int));
 
-    free(expTable);
-    free(logTable);
     free(invTable);
 
     return 0;
@@ -156,14 +138,22 @@ byte GFInv(byte in, byte* invTable){
     return invTable[in];
 }
 
-void writeGFInvTable(char* filename, byte* invTable){
-    FILE* fp; //fp = file pointer
+void writeGFInvTable(char* filename){
+    FILE* fp;
 
     fp = fopen(filename, "w+b");
+
+    byte* expTable = createGFExpTable(GENERATOR);
+    byte* logTable = createGFLogTable(GENERATOR);
+    byte* invTable = createGFInvTable(expTable, logTable);
 
     fwrite(invTable, sizeof(byte), 256, fp);
 
     fclose(fp);
+
+    free(expTable);
+    free(logTable);
+    free(invTable);
 }
 
 byte* readGFInvTable(char* filename){
@@ -176,3 +166,4 @@ byte* readGFInvTable(char* filename){
     fclose(fp);
     return table;
 }
+
