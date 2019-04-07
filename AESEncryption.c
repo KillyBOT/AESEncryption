@@ -9,12 +9,13 @@ typedef unsigned char byte;
 byte GFMult(byte, byte);
 byte GFExp(byte, byte);
 byte* createGFExpTable(byte);
+void printGFExpTable(byte*);
 
 int main(){
     byte test1 = 0xb6;
     byte test2 = 0x53;
 
-    printf("%X\t%X\n",GFMult(test1, test2));
+    printf("%x\t%x\n",GFMult(test1, test2), GFExp(0x03,0x02));
 
     byte* table = createGFExpTable(0x03);
 
@@ -47,7 +48,34 @@ byte GFExp(byte base, byte power){
 
     byte toRet = base;
 
-    for(byte b = 0; b < power; b++) toRet = GFMult(toRet, base);
+    for(byte b = 1; b < power; b++) toRet = GFMult(toRet, base);
 
     return toRet;
+}
+
+byte* createGFExpTable(byte generator){
+    byte* table = malloc(sizeof(byte) * sizeof(byte));
+
+    table[0x00] = 0x63;
+
+    for(byte b = 0; b < 0xff; b++){
+        table[ GFExp(generator,b) ] = b;
+        printf("%x\t%x\n", GFExp(generator, b),b);
+    }
+
+    return table;
+}
+
+void printGFExpTable(byte* table){
+    printf("  ");
+    for(byte b = 0; b < 16; b++) printf("%x ",b);
+    printf("\n");
+
+    for(byte row = 0; row < 16; row++){
+        printf("%x ", row);
+        for(byte col = 0; col < 16; col++){
+            printf("%x ", table[row + col]);
+        }
+        printf("\n");
+    }
 }
