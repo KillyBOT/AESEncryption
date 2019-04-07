@@ -8,14 +8,25 @@
 
 typedef unsigned char byte;
 
+
+
 byte GFMult(byte, byte);
 byte GFExp(byte, byte);
 byte GFFastMult(byte, byte, byte*, byte*);
 byte GFInv(byte, byte*);
+
+
+
 byte* createGFExpTable(byte);
 byte* createGFLogTable(byte);
 byte* createGFInvTable(byte*, byte*);
+
+
+
 void printGFTable(byte*);
+void writeGFInvTable(char*,byte*);
+byte* readGFInvTable(char*);
+
 
 int main(){
     byte test1 = 0xb6;
@@ -31,9 +42,13 @@ int main(){
     expTable = createGFExpTable(GENERATOR);
     logTable = createGFLogTable(GENERATOR);
     invTable = createGFInvTable(expTable, logTable);
+
+    writeGFInvTable("test.txt", invTable);
+    invTable = readGFInvTable("test.txt");
+
     //printGFTable(expTable);
     //printGFTable(logTable);
-    //printGFTable(invTable);
+    printGFTable(invTable);
 
     free(expTable);
     free(logTable);
@@ -139,4 +154,25 @@ byte* createGFInvTable(byte* expTable, byte* logTable){
 
 byte GFInv(byte in, byte* invTable){
     return invTable[in];
+}
+
+void writeGFInvTable(char* filename, byte* invTable){
+    FILE* fp; //fp = file pointer
+
+    fp = fopen(filename, "w+b");
+
+    fwrite(invTable, sizeof(byte), 256, fp);
+
+    fclose(fp);
+}
+
+byte* readGFInvTable(char* filename){
+    FILE* fp;
+    byte* table = malloc(256);
+
+    fp = fopen(filename, "rb");
+    fread(table, 1, 256, fp);
+
+    fclose(fp);
+    return table;
 }
