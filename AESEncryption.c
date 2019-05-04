@@ -16,18 +16,25 @@ byte GFExp(byte, byte);
 byte GFFastMult(byte, byte, byte*, byte*);
 byte GFInv(byte, byte*);
 word SubBytes(word, byte*);
+byte byteRotateLeft(byte, byte);
+byte byteRotateRight(byte, byte);
+word wordRotateLeft(word, byte);
+word wordRotateRight(word, byte);
 
 byte* createGFExpTable(byte);
 byte* createGFLogTable(byte);
 byte* createGFInvTable(byte*, byte*);
+byte* createGFInvTableBruteForce();
 
 void printGFTable(byte*);
 void printWord(word);
 void printByte(byte);
+void printKey(word*);
 void writeGFInvTable(char*);
 byte* readGFInvTable(char*);
 
 word* wordExpansion(word*, byte*);
+word getRoundKey(word*, byte);
 word g(word, byte, byte*);
 byte roundConstant(byte);
 
@@ -38,42 +45,69 @@ int main(){
 
     FILE* inputFile;
     FILE* outputFile;
+    FILE* keyFile;
     byte toEncrypt[2048];
+
     byte* invTable;
+
     word* roundKeys;
     word* testKey = malloc(sizeof(word) * 4);
+    word* key = malloc(sizeof(word) * 4);
+
     byte* currentRead = malloc(sizeof(byte) * 16);
+    
     int keepRunning = 1;
 
-    testKey[0] = 0x98765432;
-    testKey[1] = 0xdeadbeef;
-    testKey[2] = 0x0b0ecafe;
-    testKey[3] = 0x12345678;
+    testKey[0] = 0x2b7e1516;
+    testKey[1] = 0x28aed2a6;
+    testKey[2] = 0xabf71588;
+    testKey[3] = 0x9cf4f3c;
+
+    printf("%x\n",testKey[3]);
+
+    //This sets all the empty spaces to, well, spaces.
+    key[0] = 0x30303030;
+    key[1] = 0x30303030;
+    key[2] = 0x30303030;
+    key[3] = 0x30303030;
 
     inputFile = fopen("ToEncrypt.txt","r");
     outputFile = fopen("Encrypted.txt","w+");
+    keyFile = fopen("key.txt", "r");
 
     //writeGFInvTable("AESInvTable.txt");
+    writeGFInvTable("AESInvTable.txt");
     invTable = readGFInvTable("AESInvTable.txt");
+
+    printByte(C_BYTE);    
+
     roundKeys = wordExpansion(testKey, invTable);
     printf("%x\n",setBit(0x16,1,1));
 
+    //Write the key from the file
+    fread(key, sizeof(byte), 16, keyFile);
+
+    //Print key, for test reasons
+    printKey(key);
+
+    for(int x = 0; x < ROUNDS; x++){
+        printWord(roundKeys[x]);
+    }
+
     while(keepRunning == 1){
+        if(fread(currentRead, sizeof(byte), BLOCK_SIZE, inputFile) != BLOCK_SIZE) keepRunning = 0;
+
         printf("%s\n",currentRead);
         for(byte round = 0; round < ROUNDS; round++){
             //printWord(roundKeys[round]);
             //First, we will be substituting each byte with its inverse in the GF(2^8) field
             for(byte b = 0; b < BLOCK_SIZE; b++){
                 currentRead[b] = GFInv(currentRead[b], invTable);
-
             }
         }
 
         fwrite(currentRead, sizeof(byte), BLOCK_SIZE, outputFile);
-        if(fread(currentRead, sizeof(byte), BLOCK_SIZE, inputFile) != BLOCK_SIZE) keepRunning = 0;
     }
-
-    //printGFTable(invTable);
     
     fclose(inputFile);
     fclose(outputFile);
@@ -114,6 +148,60 @@ byte GFExp(byte base, byte power){
 
     return toRet;
 }
+
+byte byteRotateLeft(byte toRotate, byte amount){
+    byte temp;
+    byte toRet = toRotate;
+    for(byte b = 0; b < amount; b++){
+        temp = toRet & 0x80;
+        temp = temp >> 7;
+        toRet = toRet << 1;
+        toRet = toRet ^ temp;
+    }
+
+    return toRet;
+}
+
+byte byteRotateRight(byte toRotate, byte amount){
+    byte temp;
+    byte toRet = toRotate;
+    for(byte b = 0; b < amount; b++){
+        temp = toRet & 0x01;
+        temp = temp << 7;
+        toRet = toRet >> 1;
+        toRet = toRet ^ temp;
+    }
+
+    return toRet;
+}
+
+word wordRotateLeft(word toRotate, byte amount){
+    word temp;
+    word toRet = toRotate;
+    for(byte b = 0; b < amount; b++){
+        temp = toRet & 0x80000000;
+        temp = temp >> 31;
+        toRet = toRet << 1;
+        toRet = toRet ^ temp;
+    }
+
+    return toRet;
+}
+
+
+word wordRotateRight(word toRotate, byte amount){
+    word temp;
+    word toRet = toRotate;
+    for(byte b = 0; b < amount; b++){
+        temp = toRet & 0x01;
+        temp = temp << 31;
+        toRet = toRet >> 1;
+        toRet = toRet ^ temp;
+    }
+
+    return toRet;
+}
+
 
 byte* createGFExpTable(byte generator){
     byte* table = malloc(256);
@@ -165,13 +253,12 @@ byte* createGFInvTable(byte* expTable, byte* logTable){
 
     byte* table = malloc(256);
 
-    for(byte b = 1; b < 0xff; b++){
+    for(int b = 1; b < 0x100; b++){
         table[b] = expTable[0xff - logTable[b]];
     }
 
     //Make some adjustments to the table to make it work, probably not good practice
 
-    table[0xff] = expTable[0xff - logTable[0xff]];
     table[0x01] = 0x01;
     table[0x00] = 0x00;
 
@@ -190,6 +277,7 @@ word SubBytes(word inWord, byte* invTable){
     for(int i = 3; i >= 0; i--){
         temp = inWord >> (8 * i);
         temp = GFInv(temp, invTable);
+        temp = temp ^ byteRotateRight(temp, 4) ^ byteRotateRight(temp, 5) ^ byteRotateRight(temp, 6) ^ byteRotateRight(temp, 7) ^ C_BYTE;
         newWord = newWord << 8;
         newWord = newWord | temp;
     }
@@ -210,10 +298,17 @@ void printWord(word toPrint){
 void printByte(byte toPrint){
     byte temp = toPrint;
     for(int x = 0; x < 8; x++){
-        printf("%x\n",temp & 0x01);
-        if((temp & 1) == 1) printf("1");
+        //printf("%x\n",temp & 0x01);
+        if((temp & 0x80) == 0x80) printf("1");
         else printf("0");
-        temp >> 1;
+        temp = temp << 1;
+    }
+    printf("\n");
+}
+
+void printKey(word* keyToPrint){
+    for(int x = 0; x < 4; x++){
+        printf("%x",keyToPrint[x]);
     }
     printf("\n");
 }
@@ -253,9 +348,8 @@ word* wordExpansion(word* initialKey, byte* invTable){
     roundWords[0] = initialKey[0];
     roundWords[1] = initialKey[1];
     roundWords[2] = initialKey[2];
-    roundWords[4] = initialKey[3];
+    roundWords[3] = initialKey[3];
 
-    
     byte currentPlace;
     for(byte round = 1; round < ROUNDS / sizeof(word); round++){
         currentPlace = round * 4;
@@ -272,14 +366,15 @@ word g(word endWord, byte round, byte* invTable){
 
     word toRet = endWord;
 
-    byte toAdd = endWord >> 24;
-    toRet = toRet << 8;
-    toRet = toRet | toAdd;
+    toRet = wordRotateLeft(toRet, 8);
+    //printf("%x ",toRet);
 
     toRet = SubBytes(toRet, invTable);
+    //printf("%x ",toRet);
 
     word currentRoundConstant = roundConstant(round) << 24;
     toRet = toRet ^ currentRoundConstant;
+    //printf("%x\n",toRet);
 
     return toRet;
 }
