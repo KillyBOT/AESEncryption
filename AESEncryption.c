@@ -6,7 +6,7 @@
 #define GENERATOR 0x03
 #define C_BYTE 0x63
 #define ROUNDS 44
-#define BLOCK_SIZE 16
+#define BLOCK_SIZE 4
 
 typedef unsigned char byte;
 typedef unsigned int word;
@@ -15,11 +15,11 @@ byte GFMult(byte, byte);
 byte GFExp(byte, byte);
 byte GFFastMult(byte, byte, byte*, byte*);
 byte GFInv(byte, byte*);
-word SubBytes(word, byte*);
 byte byteRotateLeft(byte, byte);
 byte byteRotateRight(byte, byte);
 word wordRotateLeft(word, byte);
 word wordRotateRight(word, byte);
+word* flipRows(word*);
 
 byte* createGFExpTable(byte);
 byte* createGFLogTable(byte);
@@ -30,8 +30,15 @@ void printGFTable(byte*);
 void printWord(word);
 void printByte(byte);
 void printKey(word*);
+void printCurrentReadSquare(word*);
 void writeGFInvTable(char*);
 byte* readGFInvTable(char*);
+
+byte subBytes(byte, byte*);
+word subBytesWord(word, byte*);
+void subBytesAll(word*, byte*);
+void shiftRows(word*);
+void mixColumns(word*);
 
 word* wordExpansion(word*, byte*);
 word getRoundKey(word*, byte);
@@ -40,6 +47,8 @@ byte roundConstant(byte);
 
 byte getBit(byte, byte);
 byte setBit(byte, byte, byte);
+byte getByte(word, byte);
+word setByte(word, byte, byte);
 
 int main(){
 
@@ -54,7 +63,7 @@ int main(){
     word* testKey = malloc(sizeof(word) * 4);
     word* key = malloc(sizeof(word) * 4);
 
-    byte* currentRead = malloc(sizeof(byte) * 16);
+    //word* currentRead = malloc(sizeof(byte) * 16);
     
     int keepRunning = 1;
 
@@ -85,34 +94,80 @@ int main(){
     printf("%x\n",setBit(0x16,1,1));
 
     //Write the key from the file
-    fread(key, sizeof(byte), 16, keyFile);
+    fread(key, sizeof(word), 4, keyFile);
 
     //Print key, for test reasons
     printKey(key);
 
-    for(int x = 0; x < ROUNDS; x++){
+    /*for(int x = 0; x < ROUNDS; x++){
         printWord(roundKeys[x]);
-    }
+    }*/
 
-    while(keepRunning == 1){
-        if(fread(currentRead, sizeof(byte), BLOCK_SIZE, inputFile) != BLOCK_SIZE) keepRunning = 0;
+    //while(keepRunning == 1){
+        
+        //if(fread(currentRead, sizeof(word) BLOCK_SIZE, inputFile) != BLOCK_SIZE) keepRunning = 0;
+        
+        //printf("%ls\n",currentRead);
 
-        printf("%s\n",currentRead);
-        for(byte round = 0; round < ROUNDS; round++){
-            //printWord(roundKeys[round]);
-            //First, we will be substituting each byte with its inverse in the GF(2^8) field
-            for(byte b = 0; b < BLOCK_SIZE; b++){
-                currentRead[b] = GFInv(currentRead[b], invTable);
-            }
+        word* currentRead = malloc(sizeof(word) * 4);
+        currentRead[0] = 0x3243f6a8;
+        currentRead[1] = 0x885a308d;
+        currentRead[2] = 0x313198a2;
+        currentRead[3] = 0xe0370734;
+
+        for(int x = 0; x < 4; x++){
+            currentRead[x] = currentRead[x] ^ roundKeys[x];
         }
 
-        fwrite(currentRead, sizeof(byte), BLOCK_SIZE, outputFile);
-    }
+        printCurrentReadSquare(currentRead);
+
+        for(byte round = 1; round < ROUNDS / 4; round++){
+            printCurrentReadSquare(roundKeys + (4 * round));
+            //printCurrentReadSquare(currentRead);
+
+            //First, we will be substituting each byte with its inverse in the GF(2^8) field
+
+            subBytesAll(currentRead, invTable);
+
+            //printCurrentReadSquare(currentRead);
+
+            //Second, shift the rows over by certain amounts
+
+            currentRead = flipRows(currentRead);
+
+            shiftRows(currentRead);
+
+            //printCurrentReadSquare(currentRead);
+
+            //Third, we will mix the columns
+
+            if(round < 10)mixColumns(currentRead);
+            //printCurrentReadSquare(currentRead);
+
+            currentRead = flipRows(currentRead);
+
+            //Finally, we XOR the currentRead with the round keys
+
+            currentRead[0] ^= roundKeys[(round * 4)];
+            currentRead[1] ^= roundKeys[(round * 4) + 1];
+            currentRead[2] ^= roundKeys[(round * 4) + 2];
+            currentRead[3] ^= roundKeys[(round * 4) + 3];
+
+            printCurrentReadSquare(currentRead);
+
+
+
+        }
+
+        //fwrite(currentRead, sizeof(word), BLOCK_SIZE, outputFile);
+    
+    //}
     
     fclose(inputFile);
     fclose(outputFile);
     free(invTable);
     free(roundKeys);
+    free(currentRead);
     free(testKey);
 
     return 0;
@@ -202,6 +257,37 @@ word wordRotateRight(word toRotate, byte amount){
     return toRet;
 }
 
+word* flipRows(word* rows){
+    word* flippedRows = malloc(sizeof(word)*4);
+    word toAdd;
+    byte byteToAdd;
+    for( int x = 3; x >= 0; x--){
+        toAdd = 0;
+        for(int y = 0; y < 4; y++){
+            byteToAdd = getByte(rows[y], x);
+            toAdd = toAdd << 8;
+            toAdd = toAdd | byteToAdd;
+            //printf("%x\n",toAdd);
+
+        }
+        flippedRows[x] = toAdd;
+    }
+    //printCurrentReadSquare(rows);
+    //I got really lazy and I decided to just swap the values to fix an issue
+
+    word temp = flippedRows[0];
+    flippedRows[0] = flippedRows[3];
+    flippedRows[3] = temp;
+
+    temp = flippedRows[1];
+    flippedRows[1] = flippedRows[2];
+    flippedRows[2] = temp;
+    //printCurrentReadSquare(flippedRows);
+
+    return flippedRows;
+
+
+}
 
 byte* createGFExpTable(byte generator){
     byte* table = malloc(256);
@@ -270,21 +356,6 @@ byte GFInv(byte in, byte* invTable){
     return invTable[in];
 }
 
-word SubBytes(word inWord, byte* invTable){
-
-    word newWord = 0;
-    byte temp;
-    for(int i = 3; i >= 0; i--){
-        temp = inWord >> (8 * i);
-        temp = GFInv(temp, invTable);
-        temp = temp ^ byteRotateRight(temp, 4) ^ byteRotateRight(temp, 5) ^ byteRotateRight(temp, 6) ^ byteRotateRight(temp, 7) ^ C_BYTE;
-        newWord = newWord << 8;
-        newWord = newWord | temp;
-    }
-
-    return newWord;
-}
-
 void printWord(word toPrint){
     byte temp;
     for(int i = 3; i >= 0; i--){
@@ -309,6 +380,13 @@ void printByte(byte toPrint){
 void printKey(word* keyToPrint){
     for(int x = 0; x < 4; x++){
         printf("%x",keyToPrint[x]);
+    }
+    printf("\n");
+}
+
+void printCurrentReadSquare(word* currentRead){
+    for(int x = 0; x < 4; x++){
+        printf("%x\n",currentRead[x]);
     }
     printf("\n");
 }
@@ -342,6 +420,57 @@ byte* readGFInvTable(char* filename){
     return table;
 }
 
+byte subBytes(byte in, byte* invTable){
+    byte toRet = in;
+    toRet = GFInv(toRet, invTable);
+    toRet = toRet ^ byteRotateRight(toRet, 4) ^ byteRotateRight(toRet, 5) ^ byteRotateRight(toRet, 6) ^ byteRotateRight(toRet, 7) ^ C_BYTE;
+    return toRet;
+}
+
+word subBytesWord(word inWord, byte* invTable){
+
+    word newWord = 0;
+    byte temp;
+    for(int i = 3; i >= 0; i--){
+        temp = inWord >> (8 * i);
+        temp = subBytes(temp, invTable);
+        newWord = newWord << 8;
+        newWord = newWord | temp;
+    }
+
+    return newWord;
+}
+
+void subBytesAll(word* currentRead, byte* invTable){
+
+    for(int x = 0; x < 4; x++){
+        currentRead[x] = subBytesWord(currentRead[x], invTable);
+    }
+}
+
+void shiftRows(word* rows){
+
+    rows[1] = wordRotateLeft(rows[1],8);
+    rows[2] = wordRotateLeft(rows[2],16);
+    rows[3] = wordRotateLeft(rows[3],24);
+
+    //rows = tempRows;
+}
+
+void mixColumns(word* rows){
+    word oldRows0, oldRows1, oldRows2, oldRows3;
+    for(int col = 0; col < 4; col++){
+        oldRows0 = rows[0];
+        oldRows1 = rows[1];
+        oldRows2 = rows[2];
+        oldRows3 = rows[3];
+        rows[0] = setByte( rows[0], col, GFMult(2, getByte(oldRows0,col)) ^ GFMult(3, getByte(oldRows1,col)) ^ getByte(oldRows2, col) ^ getByte(oldRows3, col));
+        rows[1] = setByte( rows[1], col, getByte(oldRows0, col) ^ GFMult(2, getByte(oldRows1,col)) ^ GFMult(3, getByte(oldRows2, col)) ^ getByte(oldRows3, col));
+        rows[2] = setByte( rows[2], col, getByte(oldRows0, col) ^ getByte(oldRows1, col) ^ GFMult(2, getByte(oldRows2, col)) ^ GFMult(3,getByte(oldRows3, col)));
+        rows[3] = setByte( rows[3], col, GFMult(3,getByte(oldRows0, col)) ^ getByte(oldRows1, col) ^ getByte(oldRows2, col) ^ GFMult(2,getByte(oldRows3, col)));
+    }  
+}
+
 word* wordExpansion(word* initialKey, byte* invTable){
     word* roundWords = malloc(sizeof(word) * ROUNDS);
 
@@ -369,7 +498,7 @@ word g(word endWord, byte round, byte* invTable){
     toRet = wordRotateLeft(toRet, 8);
     //printf("%x ",toRet);
 
-    toRet = SubBytes(toRet, invTable);
+    toRet = subBytesWord(toRet, invTable);
     //printf("%x ",toRet);
 
     word currentRoundConstant = roundConstant(round) << 24;
@@ -396,4 +525,25 @@ byte setBit(byte inByte, byte pos, byte newVal){
     newBit = newBit << (7 - pos);
     if(newVal == 0) return inByte & newBit;
     else return inByte | newBit;
+}
+
+byte getByte(word in, byte byteToGet){
+    byte temp = wordRotateRight(in, byteToGet * 8);
+    return temp;
+}
+
+word setByte(word in, byte bytePos, byte newByte){
+    word toRet = in;
+
+    word temp = 0xffffff00;
+    temp = wordRotateLeft(temp, bytePos * 8);
+
+    toRet = toRet & temp;
+
+    temp = 0x000000ff & newByte;
+    temp = temp << (bytePos * 8);
+    toRet = toRet | temp;
+
+    return toRet;
+
 }
