@@ -16,6 +16,7 @@ int main(){
     word* currentRead = malloc(sizeof(byte) * 16);
     
     int keepRunning = 1;
+    int sizeOfRead;
 
     testKey[0] = 0x00010203;
     testKey[1] = 0x04050607;
@@ -43,33 +44,35 @@ int main(){
     for(int x = 0; x < BLOCK_SIZE; x++) key[x] = flipBytes(key[x]);
 
     //Print key, for test reasons
-    printKey(testKey);
+    printKey(key);
 
-    roundKeys = wordExpansion(testKey, invTable);
+    roundKeys = wordExpansion(key, invTable);
 
-    for(int x = 0; x < 0x100; x++){
+    /*for(int x = 0; x < 0x100; x++){
         printf("%d ",subBytesDecrypt(x, invTable));
-    }
+    }*/
 
-    //while(keepRunning == 1){
-        
-        //if(fread(currentRead, sizeof(word), BLOCK_SIZE, inputFile) != BLOCK_SIZE) keepRunning = 0;
+    while(keepRunning == 1){
 
-        //for(int x = 0; x < BLOCK_SIZE; x++) currentRead[x] = flipBytes(currentRead[x]);
-        
+        sizeOfRead = fread(currentRead, sizeof(word), BLOCK_SIZE, inputFile);
+
+        if(sizeOfRead != BLOCK_SIZE) keepRunning = 0;
+
+        for(int x = 0; x < BLOCK_SIZE; x++) currentRead[x] = flipBytes(currentRead[x]);
+
         //printCurrentRead(currentRead);
 
-        //word* currentRead = malloc(sizeof(word) * 4);
-        currentRead[0] = 0x69c4e0d8;
-        currentRead[1] = 0x6a7b0430;
-        currentRead[2] = 0xd8cdb780;
-        currentRead[3] = 0x70b4c55a;
+        
+        //currentRead[0] = 0x69c4e0d8;
+        //currentRead[1] = 0x6a7b0430;
+        //currentRead[2] = 0xd8cdb780;
+        //currentRead[3] = 0x70b4c55a;
 
         for(int x = 0; x < 4; x++){
             currentRead[x] = currentRead[x] ^ roundKeys[40 + x];
         }
 
-        printCurrentRead(currentRead);
+        //printCurrentRead(currentRead);
 
         /*for(int x = 0; x < ROUNDS * 4; x++){
             printWord(roundKeys[x]);
@@ -86,15 +89,15 @@ int main(){
 
             currentRead = flipRows(currentRead);
 
-            printCurrentRead(currentRead);
+            //printCurrentRead(currentRead);
 
             //Second, We inverse substitute the bytes in GF(2^8)
             
             subBytesAllDecrypt(currentRead,invTable);
-            printCurrentRead(currentRead);
+            //printCurrentRead(currentRead);
 
             //Third, we XOR the currentRead with the current round key
-            printCurrentRead(roundKeys + (4 * round));
+            //printCurrentRead(roundKeys + (4 * round));
 
 
             currentRead[0] ^= roundKeys[(round * 4)];
@@ -111,15 +114,19 @@ int main(){
 
             currentRead = flipRows(currentRead);
 
-            printCurrentRead(currentRead);
+            //printCurrentRead(currentRead);
 
 
 
-        //}
+        }
         //printCurrentRead(currentRead);
-        //fwrite(currentRead, sizeof(word), BLOCK_SIZE, outputFile);
 
-        //for(int x = 0; x < 4; x++) fprintf(outputFileHex,"%X",currentRead[x]);
+        //If you're asking about why I'm flipping the bits, it's because little and big endian is reeeeeally annoying
+        for(int x = 0; x < BLOCK_SIZE; x++) currentRead[x] = flipBytes(currentRead[x]);
+        fwrite(currentRead, sizeof(word), BLOCK_SIZE, outputFile);
+        for(int x = 0; x < BLOCK_SIZE; x++) currentRead[x] = flipBytes(currentRead[x]);
+        for(int x = 0; x < BLOCK_SIZE; x++) writeWord(outputFileHex, currentRead[x]);
+        printCurrentRead(currentRead);
     
     }
     

@@ -16,6 +16,7 @@ int main(){
     word* currentRead = malloc(sizeof(byte) * 16);
     
     int keepRunning = 1;
+    int readSize;
 
     //testKey[0] = 0x2b7e1516;
     //testKey[1] = 0x28aed2a6;
@@ -48,13 +49,18 @@ int main(){
     roundKeys = wordExpansion(key, invTable);
 
     while(keepRunning == 1){
-        
-        if(fread(currentRead, sizeof(word), BLOCK_SIZE, inputFile) != BLOCK_SIZE) keepRunning = 0;
 
-        //printCurrentReadSquare(currentRead);
+        readSize = fread(currentRead, sizeof(word), BLOCK_SIZE, inputFile);
+        
+        if(readSize != BLOCK_SIZE) {
+            keepRunning = 0;
+            for(int x = readSize; x < BLOCK_SIZE; x++){
+                currentRead[x] = 0x20202020;
+            }
+        }
         //Flip bytes, becuase fread is being annoying
         for(int x = 0; x < BLOCK_SIZE; x++) currentRead[x] = flipBytes(currentRead[x]);
-        printCurrentRead(currentRead);
+        //printCurrentRead(currentRead);
         
         //printCurrentRead(currentRead);
 
@@ -106,9 +112,10 @@ int main(){
 
         }
         printCurrentRead(currentRead);
+        for(int x = 0; x < BLOCK_SIZE; x++) currentRead[x] = flipBytes(currentRead[x]);
         fwrite(currentRead, sizeof(word), BLOCK_SIZE, outputFile);
 
-        for(int x = 0; x < BLOCK_SIZE; x++) fprintf(outputFileHex, "%X", currentRead[x]);
+        for(int x = 0; x < BLOCK_SIZE; x++) writeWord(outputFileHex,currentRead[x]);
     
     }
     
