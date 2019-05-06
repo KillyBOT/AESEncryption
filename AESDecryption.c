@@ -1,5 +1,5 @@
 #include "AES.h"
-int main(){
+int main(int argc, char** argv){
 
     FILE* inputFile;
     FILE* outputFile;
@@ -29,10 +29,17 @@ int main(){
     key[2] = 0x30303030;
     key[3] = 0x30303030;
 
-    inputFile = fopen("Encrypted.txt","r");
-    outputFile = fopen("Decrypted.txt","w+");
-    outputFileHex = fopen("DecryptedHex.txt","w+");
-    keyFile = fopen("key.txt", "r");
+    if(argc > 1) inputFile = fopen(argv[1],"r");
+    else inputFile = fopen("Encrypted.txt","r");
+
+    if(argc > 2)outputFile = fopen(argv[2],"w+");
+    else outputFile = fopen("Decrypted.txt","w+");
+
+    if(argc > 3) keyFile = fopen(argv[3],"r");
+    else keyFile = fopen("key.txt", "r");
+
+    if(argc > 4)outputFileHex = fopen(argv[4],"w+");
+    else outputFileHex = fopen("DecryptedHex.txt","w+");
 
     //writeGFInvTable("AESInvTable.txt");
     writeGFInvTable("AESInvTable.txt");
