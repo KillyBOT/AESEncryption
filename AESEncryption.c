@@ -14,7 +14,7 @@ int main(){
     word* key = malloc(sizeof(word) * 4);
 
     word* currentRead = malloc(sizeof(byte) * 16);
-    
+
     int keepRunning = 1;
     int readSize;
 
@@ -51,17 +51,18 @@ int main(){
     while(keepRunning == 1){
 
         readSize = fread(currentRead, sizeof(word), BLOCK_SIZE, inputFile);
-        
+
         if(readSize != BLOCK_SIZE) {
             keepRunning = 0;
             for(int x = readSize; x < BLOCK_SIZE; x++){
                 currentRead[x] = 0x20202020;
             }
+            printCurrentRead(currentRead);
         }
         //Flip bytes, becuase fread is being annoying
         for(int x = 0; x < BLOCK_SIZE; x++) currentRead[x] = flipBytes(currentRead[x]);
         //printCurrentRead(currentRead);
-        
+
         //printCurrentRead(currentRead);
 
         //word* currentRead = malloc(sizeof(word) * 4);
@@ -111,14 +112,14 @@ int main(){
 
 
         }
-        printCurrentRead(currentRead);
+        //printCurrentRead(currentRead);
         for(int x = 0; x < BLOCK_SIZE; x++) currentRead[x] = flipBytes(currentRead[x]);
         fwrite(currentRead, sizeof(word), BLOCK_SIZE, outputFile);
 
         for(int x = 0; x < BLOCK_SIZE; x++) writeWord(outputFileHex,currentRead[x]);
-    
+
     }
-    
+
     fclose(inputFile);
     fclose(outputFile);
     free(invTable);
