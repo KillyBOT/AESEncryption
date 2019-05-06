@@ -28,9 +28,9 @@ int main(){
     key[2] = 0x30303030;
     key[3] = 0x30303030;
 
-    inputFile = fopen("ToEncrypt.txt","r");
-    outputFile = fopen("Encrypted.txt","w+");
-    outputFileHex = fopen("EncryptedHex.txt","w+");
+    inputFile = fopen("Encrypted.txt","r");
+    outputFile = fopen("Decrypted.txt","w+");
+    outputFileHex = fopen("DecryptedHex.txt","w+");
     keyFile = fopen("key.txt", "r");
 
     //writeGFInvTable("AESInvTable.txt");
@@ -38,9 +38,9 @@ int main(){
     invTable = readGFInvTable("AESInvTable.txt");
 
     //Write the key from the file
-    fread(key, sizeof(word), BLOCK_SIZE, keyFile);
-    for(int x = 0; x < BLOCK_SIZE; x++) key[x] = flipBytes(key[x]);
+    fread(key, sizeof(word), 4, keyFile);
 
+    for(int x = 0; x < BLOCK_SIZE; x++) key[x] = flipBytes(key[x]);
 
     //Print key, for test reasons
     printKey(key);
@@ -51,10 +51,7 @@ int main(){
         
         if(fread(currentRead, sizeof(word), BLOCK_SIZE, inputFile) != BLOCK_SIZE) keepRunning = 0;
 
-        //printCurrentReadSquare(currentRead);
-        //Flip bytes, becuase fread is being annoying
         for(int x = 0; x < BLOCK_SIZE; x++) currentRead[x] = flipBytes(currentRead[x]);
-        printCurrentRead(currentRead);
         
         //printCurrentRead(currentRead);
 
@@ -64,51 +61,54 @@ int main(){
         //currentRead[2] = 0x313198a2;
         //currentRead[3] = 0xe0370734;
 
-        for(int x = 0; x < BLOCK_SIZE; x++){
+        for(int x = 0; x < 4; x++){
             currentRead[x] = currentRead[x] ^ roundKeys[x];
         }
 
-        for(byte round = 1; round < ROUNDS; round++){
+        for(byte round = 0; round < ROUNDS - 1; round++){
             //printCurrentReadSquare(roundKeys + (4 * round));
             //printCurrentReadSquare(currentRead);
 
-            //First, we will be substituting each byte with its inverse in the GF(2^8) field
-
-            subBytesAll(currentRead, invTable);
-
-            //printCurrentReadSquare(currentRead);
-
-            //Second, shift the rows over by certain amounts
+            //First, we inverse shift the rows
 
             currentRead = flipRows(currentRead);
 
-            shiftRows(currentRead);
-
-            //printCurrentReadSquare(currentRead);
-
-            //Third, we will mix the columns
-
-            if(round < 10)mixColumns(currentRead);
-            //printCurrentReadSquare(currentRead);
+            shiftRowsDecrypt(currentRead);
 
             currentRead = flipRows(currentRead);
 
-            //Finally, we XOR the currentRead with the round keys
+            //printCurrentReadSquare(currentRead);
 
-            currentRead[0] ^= roundKeys[(round * BLOCK_SIZE)];
-            currentRead[1] ^= roundKeys[(round * BLOCK_SIZE) + 1];
-            currentRead[2] ^= roundKeys[(round * BLOCK_SIZE) + 2];
-            currentRead[3] ^= roundKeys[(round * BLOCK_SIZE) + 3];
+            //Second, We inverse substitute the bytes in GF(2^8)
+            
+            subBytesAllDecrypt(currentRead,invTable);
+            //printCurrentReadSquare(currentRead);
+
+            //Third, we XOR the currentRead with the current round key
+
+            currentRead[0] ^= roundKeys[(round * 4)];
+            currentRead[1] ^= roundKeys[(round * 4) + 1];
+            currentRead[2] ^= roundKeys[(round * 4) + 2];
+            currentRead[3] ^= roundKeys[(round * 4) + 3];
+
+            //Finally, we mix the columns
+
+            currentRead = flipRows(currentRead);
+
+            if(round < 10)mixColumnsDecrypt(currentRead);
+            //printCurrentReadSquare(currentRead);
+
+            currentRead = flipRows(currentRead);
 
             //printCurrentRead(currentRead);
 
 
 
         }
-        printCurrentRead(currentRead);
+        //printCurrentRead(currentRead);
         fwrite(currentRead, sizeof(word), BLOCK_SIZE, outputFile);
 
-        for(int x = 0; x < BLOCK_SIZE; x++) fprintf(outputFileHex, "%X", currentRead[x]);
+        for(int x = 0; x < 4; x++) fprintf(outputFileHex, "%X", currentRead[x]);
     
     }
     
