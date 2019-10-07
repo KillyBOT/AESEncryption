@@ -17,6 +17,7 @@ int main(int argc, char** argv){
 
     int keepRunning = 1;
     int sizeOfRead;
+    int finalSizeOfWrite = sizeof(word);
 
     testKey[0] = 0x00010203;
     testKey[1] = 0x04050607;
@@ -51,6 +52,7 @@ int main(int argc, char** argv){
     for(int x = 0; x < BLOCK_SIZE; x++) key[x] = flipBytes(key[x]);
 
     //Print key, for test reasons
+    printf("Key: ");
     printKey(key);
 
     roundKeys = wordExpansion(key, invTable);
@@ -62,32 +64,19 @@ int main(int argc, char** argv){
     while(keepRunning == 1){
 
         sizeOfRead = fread(currentRead, sizeof(word), BLOCK_SIZE, inputFile);
-
-        if(sizeOfRead != BLOCK_SIZE) keepRunning = 0;
+        printCurrentRead(currentRead);
+        printf("%ld\n", ftell(inputFile));
 
         for(int x = 0; x < BLOCK_SIZE; x++) currentRead[x] = flipBytes(currentRead[x]);
-
-        //printCurrentRead(currentRead);
-
-
-        //currentRead[0] = 0x69c4e0d8;
-        //currentRead[1] = 0x6a7b0430;
-        //currentRead[2] = 0xd8cdb780;
-        //currentRead[3] = 0x70b4c55a;
 
         for(int x = 0; x < 4; x++){
             currentRead[x] = currentRead[x] ^ roundKeys[40 + x];
         }
-
-        //printCurrentRead(currentRead);
-
         /*for(int x = 0; x < ROUNDS * 4; x++){
             printWord(roundKeys[x]);
         }*/
 
         for(int round = ROUNDS - 2; round >= 0; round--){
-            //printCurrentReadSquare(currentRead);
-
             //First, we inverse shift the rows
 
             currentRead = flipRows(currentRead);
@@ -96,16 +85,11 @@ int main(int argc, char** argv){
 
             currentRead = flipRows(currentRead);
 
-            //printCurrentRead(currentRead);
-
             //Second, We inverse substitute the bytes in GF(2^8)
 
             subBytesAllDecrypt(currentRead,invTable);
-            //printCurrentRead(currentRead);
 
             //Third, we XOR the currentRead with the current round key
-            //printCurrentRead(roundKeys + (4 * round));
-
 
             currentRead[0] ^= roundKeys[(round * 4)];
             currentRead[1] ^= roundKeys[(round * 4) + 1];
@@ -115,27 +99,34 @@ int main(int argc, char** argv){
             //Finally, we mix the columns
 
             currentRead = flipRows(currentRead);
-
             if(round > 0)mixColumnsDecrypt(currentRead);
-            //printCurrentReadSquare(currentRead);
-
             currentRead = flipRows(currentRead);
 
-            //printCurrentRead(currentRead);
-
-
-
         }
-        //printCurrentRead(currentRead);
 
         //If you're asking about why I'm flipping the bits, it's because little and big endian is reeeeeally annoying
-        for(int x = 0; x < BLOCK_SIZE; x++) currentRead[x] = flipBytes(currentRead[x]);
-        fwrite(currentRead, sizeof(word), sizeOfRead, outputFile);
-        for(int x = 0; x < BLOCK_SIZE; x++) currentRead[x] = flipBytes(currentRead[x]);
-        for(int x = 0; x < sizeOfRead; x++) writeWord(outputFileHex, currentRead[x]);
         printCurrentRead(currentRead);
+        currentRead[BLOCK_SIZE - 1] = flipBytes(currentRead[BLOCK_SIZE - 1]);
 
+        if(fgetc(inputFile) == EOF) {
+          finalSizeOfWrite = currentRead[BLOCK_SIZE - 1];
+          printf("%d\n", finalSizeOfWrite);
+          printf("End of file reached\n");
+          keepRunning = 0;
+
+        } else fseek(inputFile, -1, SEEK_CUR);
+        currentRead[BLOCK_SIZE - 1] = flipBytes(currentRead[BLOCK_SIZE - 1]);
+
+        for(int x = 0; x < finalSizeOfWrite; x++){
+          currentRead[x] = flipBytes(currentRead[x]);
+          //printf("%x\n", currentRead[x]);
+          fwrite(currentRead + x, sizeof(word), 1, outputFile);
+          currentRead[x] = flipBytes(currentRead[x]);
+          writeWord(outputFileHex, currentRead[x]);
+        }
+        //printCurrentRead(currentRead);
     }
+
 
     fclose(inputFile);
     fclose(outputFile);

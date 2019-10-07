@@ -56,49 +56,50 @@ int main(int argc, char** argv){
     roundKeys = wordExpansion(key, invTable);
 
     while(keepRunning == 1){
-
-        readSize = fread(currentRead, sizeof(word), BLOCK_SIZE, inputFile);
-
+        readSize = 0;
+        for(int x = 0; x < BLOCK_SIZE; x++) currentRead[x] = 0;
+        /*readSize = fread(currentRead, sizeof(word), BLOCK_SIZE, inputFile);
+        printCurrentRead(currentRead);
+        printf("%ld\n", readSize * sizeof(word));
         if(readSize != BLOCK_SIZE) {
             keepRunning = 0;
-            for(int x = readSize; x < BLOCK_SIZE; x++){
-                currentRead[x] = 0x20202020;
+            if(readSize > 0){
+              for(int x = readSize; x < BLOCK_SIZE - 1; x++) currentRead[x] = 0x00000000;
+              currentRead[BLOCK_SIZE - 1] = readSize;
+            } else {
+              for(int x = 0; x < BLOCK_SIZE; x++) currentRead[x] = 0x00000000;
             }
             printCurrentRead(currentRead);
+        }*/
+        for(int x = 0; x < BLOCK_SIZE; x++){
+          printf("%d\n", x);
+          if(keepRunning == 0){
+            if(x == BLOCK_SIZE - 1) *(currentRead + x) = readSize;
+            else *(currentRead + x) = 0;
+          } else {
+            readSize += fread(currentRead + x, sizeof(char), sizeof(word), inputFile);
+            if(readSize % sizeof(word) != sizeof(word)) keepRunning = 0;
+          }
+          printCurrentRead(currentRead);
         }
         //Flip bytes, becuase fread is being annoying
         for(int x = 0; x < BLOCK_SIZE; x++) currentRead[x] = flipBytes(currentRead[x]);
-        //printCurrentRead(currentRead);
-
-        //printCurrentRead(currentRead);
-
-        //word* currentRead = malloc(sizeof(word) * 4);
-        //currentRead[0] = 0x3243f6a8;
-        //currentRead[1] = 0x885a308d;
-        //currentRead[2] = 0x313198a2;
-        //currentRead[3] = 0xe0370734;
 
         for(int x = 0; x < BLOCK_SIZE; x++){
             currentRead[x] = currentRead[x] ^ roundKeys[x];
         }
 
         for(byte round = 1; round < ROUNDS; round++){
-            //printCurrentReadSquare(roundKeys + (4 * round));
-            //printCurrentReadSquare(currentRead);
 
             //First, we will be substituting each byte with its inverse in the GF(2^8) field
 
             subBytesAll(currentRead, invTable);
-
-            //printCurrentReadSquare(currentRead);
 
             //Second, shift the rows over by certain amounts
 
             currentRead = flipRows(currentRead);
 
             shiftRows(currentRead);
-
-            //printCurrentReadSquare(currentRead);
 
             //Third, we will mix the columns
 
@@ -114,16 +115,15 @@ int main(int argc, char** argv){
             currentRead[2] ^= roundKeys[(round * BLOCK_SIZE) + 2];
             currentRead[3] ^= roundKeys[(round * BLOCK_SIZE) + 3];
 
-            //printCurrentRead(currentRead);
-
-
-
         }
         //printCurrentRead(currentRead);
-        for(int x = 0; x < BLOCK_SIZE; x++) currentRead[x] = flipBytes(currentRead[x]);
-        fwrite(currentRead, sizeof(word), BLOCK_SIZE, outputFile);
 
-        for(int x = 0; x < BLOCK_SIZE; x++) writeWord(outputFileHex,currentRead[x]);
+        for(int x = 0; x < BLOCK_SIZE; x++){
+          currentRead[x] = flipBytes(currentRead[x]);
+          printf("%x\n", *(currentRead + x));
+          fwrite(currentRead + x, sizeof(word), 1, outputFile);
+          writeWord(outputFileHex,currentRead[x]);
+        }
 
     }
 
