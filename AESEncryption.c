@@ -51,37 +51,26 @@ int main(int argc, char** argv){
 
 
     //Print key, for test reasons
+    printf("Key: ");
     printKey(key);
 
     roundKeys = wordExpansion(key, invTable);
 
     while(keepRunning == 1){
         readSize = 0;
-        for(int x = 0; x < BLOCK_SIZE; x++) currentRead[x] = 0;
-        /*readSize = fread(currentRead, sizeof(word), BLOCK_SIZE, inputFile);
-        printCurrentRead(currentRead);
-        printf("%ld\n", readSize * sizeof(word));
-        if(readSize != BLOCK_SIZE) {
-            keepRunning = 0;
-            if(readSize > 0){
-              for(int x = readSize; x < BLOCK_SIZE - 1; x++) currentRead[x] = 0x00000000;
-              currentRead[BLOCK_SIZE - 1] = readSize;
-            } else {
-              for(int x = 0; x < BLOCK_SIZE; x++) currentRead[x] = 0x00000000;
-            }
-            printCurrentRead(currentRead);
-        }*/
+
         for(int x = 0; x < BLOCK_SIZE; x++){
-          printf("%d\n", x);
+          currentRead[x] = 0;
           if(keepRunning == 0){
             if(x == BLOCK_SIZE - 1) *(currentRead + x) = readSize;
             else *(currentRead + x) = 0;
           } else {
             readSize += fread(currentRead + x, sizeof(char), sizeof(word), inputFile);
-            if(readSize % sizeof(word) != sizeof(word)) keepRunning = 0;
+            if(readSize == 0 || readSize % sizeof(word) != 0) keepRunning = 0;
           }
           printCurrentRead(currentRead);
         }
+        
         //Flip bytes, becuase fread is being annoying
         for(int x = 0; x < BLOCK_SIZE; x++) currentRead[x] = flipBytes(currentRead[x]);
 

@@ -17,7 +17,7 @@ int main(int argc, char** argv){
 
     int keepRunning = 1;
     int sizeOfRead;
-    int finalSizeOfWrite = sizeof(word);
+    int finalSizeOfWrite = sizeof(word) * BLOCK_SIZE;
 
     testKey[0] = 0x00010203;
     testKey[1] = 0x04050607;
@@ -64,14 +64,15 @@ int main(int argc, char** argv){
     while(keepRunning == 1){
 
         sizeOfRead = fread(currentRead, sizeof(word), BLOCK_SIZE, inputFile);
-        printCurrentRead(currentRead);
-        printf("%ld\n", ftell(inputFile));
+        //printCurrentRead(currentRead);
+        //printf("%ld\n", ftell(inputFile));
 
         for(int x = 0; x < BLOCK_SIZE; x++) currentRead[x] = flipBytes(currentRead[x]);
 
-        for(int x = 0; x < 4; x++){
+        for(int x = 0; x < BLOCK_SIZE; x++){
             currentRead[x] = currentRead[x] ^ roundKeys[40 + x];
         }
+
         /*for(int x = 0; x < ROUNDS * 4; x++){
             printWord(roundKeys[x]);
         }*/
@@ -105,24 +106,25 @@ int main(int argc, char** argv){
         }
 
         //If you're asking about why I'm flipping the bits, it's because little and big endian is reeeeeally annoying
-        printCurrentRead(currentRead);
+        //printCurrentRead(currentRead);
         currentRead[BLOCK_SIZE - 1] = flipBytes(currentRead[BLOCK_SIZE - 1]);
 
         if(fgetc(inputFile) == EOF) {
           finalSizeOfWrite = currentRead[BLOCK_SIZE - 1];
-          printf("%d\n", finalSizeOfWrite);
-          printf("End of file reached\n");
+          //printf("End of file reached\n");
           keepRunning = 0;
 
         } else fseek(inputFile, -1, SEEK_CUR);
         currentRead[BLOCK_SIZE - 1] = flipBytes(currentRead[BLOCK_SIZE - 1]);
 
-        for(int x = 0; x < finalSizeOfWrite; x++){
-          currentRead[x] = flipBytes(currentRead[x]);
-          //printf("%x\n", currentRead[x]);
-          fwrite(currentRead + x, sizeof(word), 1, outputFile);
-          currentRead[x] = flipBytes(currentRead[x]);
+        for(int x = 0; x < BLOCK_SIZE; x++){
           writeWord(outputFileHex, currentRead[x]);
+          currentRead[x] = flipBytes(currentRead[x]);
+        }
+
+        for(int x = 0; x < finalSizeOfWrite; x++){
+          //printf("%x\n", currentRead[x]);
+          fwrite((char*)currentRead + x, sizeof(char), 1, outputFile);
         }
         //printCurrentRead(currentRead);
     }
