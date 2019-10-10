@@ -32,11 +32,11 @@ int main(int argc, char** argv){
     if(argc > 1) inputFile = fopen(argv[1],"r");
     else inputFile = fopen("ToEncrypt.txt","r");
 
-    if(argc > 2)outputFile = fopen(argv[2],"w+");
-    else outputFile = fopen("Encrypted.txt","w+");
-
-    if(argc > 3) keyFile = fopen(argv[3],"r");
+    if(argc > 2) keyFile = fopen(argv[2],"r");
     else keyFile = fopen("key.txt", "r");
+
+    if(argc > 3)outputFile = fopen(argv[3],"w+");
+    else outputFile = fopen("Encrypted.txt","w+");
 
     if(argc > 4)outputFileHex = fopen(argv[4],"w+");
     else outputFileHex = fopen("EncryptedHex.txt","w+");
@@ -68,9 +68,9 @@ int main(int argc, char** argv){
             readSize += fread(currentRead + x, sizeof(char), sizeof(word), inputFile);
             if(readSize == 0 || readSize % sizeof(word) != 0) keepRunning = 0;
           }
-          printCurrentRead(currentRead);
+          //printCurrentRead(currentRead);
         }
-        
+
         //Flip bytes, becuase fread is being annoying
         for(int x = 0; x < BLOCK_SIZE; x++) currentRead[x] = flipBytes(currentRead[x]);
 
@@ -109,12 +109,14 @@ int main(int argc, char** argv){
 
         for(int x = 0; x < BLOCK_SIZE; x++){
           currentRead[x] = flipBytes(currentRead[x]);
-          printf("%x\n", *(currentRead + x));
+          //printf("%x\n", *(currentRead + x));
           fwrite(currentRead + x, sizeof(word), 1, outputFile);
           writeWord(outputFileHex,currentRead[x]);
         }
 
     }
+
+    printf("Finished encryption\n");
 
     fclose(inputFile);
     fclose(outputFile);

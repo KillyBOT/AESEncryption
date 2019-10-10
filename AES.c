@@ -16,7 +16,7 @@ byte GFMult(byte a, byte b){
         }
 
         aa = aa >> 1;
-    } 
+    }
 
     return r;
 }
@@ -136,7 +136,7 @@ word flipBytes(word toFlip){
 
 byte* createGFExpTable(byte generator){
     byte* table = malloc(256);
-    
+
     for(byte b = 0; b < 0xff; b++){
         table[ b ] = GFExp(generator, b);
         //printf("%x\t%x\n", GFExp(generator, b),b);
@@ -149,7 +149,7 @@ byte* createGFLogTable(byte generator){
     byte* table = malloc(256);
 
 
-    
+
     for(byte b = 0; b < 0xff; b++){
         table[ GFExp(generator, b) ] = b;
         //printf("%x\t%x\n", GFExp(generator, b),b);
@@ -291,9 +291,15 @@ void writeWord(FILE* fp, word toPrint){
     byte temp;
     for(int i = 3; i >= 0; i--){
         temp = toPrint >> (8*i);
-        if(temp < 16) fprintf(fp,"0");
-        fprintf(fp,"%x",temp);
+        fprintf(fp,"%.2X",temp);
     }
+}
+void writeWordN(FILE* fp, word toPrint, size_t size){
+  byte temp;
+  for(int i = 3; i >= 4 - (byte)size; i--){
+      temp = toPrint >> (8*i);
+      fprintf(fp,"%.2X",temp);
+  }
 }
 
 byte subBytes(byte in, byte* invTable){
@@ -379,7 +385,7 @@ void mixColumns(word* rows){
         rows[1] = setByte( rows[1], col, getByte(oldRows0, col) ^ GFMult(2, getByte(oldRows1,col)) ^ GFMult(3, getByte(oldRows2, col)) ^ getByte(oldRows3, col));
         rows[2] = setByte( rows[2], col, getByte(oldRows0, col) ^ getByte(oldRows1, col) ^ GFMult(2, getByte(oldRows2, col)) ^ GFMult(3,getByte(oldRows3, col)));
         rows[3] = setByte( rows[3], col, GFMult(3,getByte(oldRows0, col)) ^ getByte(oldRows1, col) ^ getByte(oldRows2, col) ^ GFMult(2,getByte(oldRows3, col)));
-    }  
+    }
 }
 
 void mixColumnsDecrypt(word* rows){
@@ -393,7 +399,7 @@ void mixColumnsDecrypt(word* rows){
         rows[1] = setByte( rows[1], col, GFMult(0x09, getByte(oldRows0,col)) ^ GFMult(0x0e, getByte(oldRows1,col)) ^ GFMult(0x0b, getByte(oldRows2, col)) ^ GFMult(0x0d,getByte(oldRows3, col)));
         rows[2] = setByte( rows[2], col, GFMult(0x0d, getByte(oldRows0,col)) ^ GFMult(0x09, getByte(oldRows1,col)) ^ GFMult(0x0e, getByte(oldRows2, col)) ^ GFMult(0x0b,getByte(oldRows3, col)));
         rows[3] = setByte( rows[3], col, GFMult(0x0b, getByte(oldRows0,col)) ^ GFMult(0x0d, getByte(oldRows1,col)) ^ GFMult(0x09, getByte(oldRows2, col)) ^ GFMult(0x0e,getByte(oldRows3, col)));
-    }  
+    }
 }
 
 

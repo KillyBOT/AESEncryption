@@ -39,6 +39,7 @@ void printCurrentReadASCII(word*);
 void writeGFInvTable(char*);
 byte* readGFInvTable(char*);
 void writeWord(FILE*, word);
+void writeWordN(FILE*, word, size_t);
 
 byte subBytes(byte, byte*);
 byte subBytesDecrypt(byte, byte*);

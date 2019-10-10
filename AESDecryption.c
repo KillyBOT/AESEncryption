@@ -18,6 +18,7 @@ int main(int argc, char** argv){
     int keepRunning = 1;
     int sizeOfRead;
     int finalSizeOfWrite = sizeof(word) * BLOCK_SIZE;
+    int hexChars;
 
     testKey[0] = 0x00010203;
     testKey[1] = 0x04050607;
@@ -113,22 +114,26 @@ int main(int argc, char** argv){
           finalSizeOfWrite = currentRead[BLOCK_SIZE - 1];
           //printf("End of file reached\n");
           keepRunning = 0;
-
         } else fseek(inputFile, -1, SEEK_CUR);
+
         currentRead[BLOCK_SIZE - 1] = flipBytes(currentRead[BLOCK_SIZE - 1]);
 
+        hexChars = finalSizeOfWrite;
+
         for(int x = 0; x < BLOCK_SIZE; x++){
-          writeWord(outputFileHex, currentRead[x]);
+          if(hexChars < BLOCK_SIZE && hexChars > 0) writeWordN(outputFileHex, currentRead[x], hexChars);
+          else if( hexChars > 0) writeWord(outputFileHex, currentRead[x]);
           currentRead[x] = flipBytes(currentRead[x]);
+          hexChars -= BLOCK_SIZE;
         }
 
         for(int x = 0; x < finalSizeOfWrite; x++){
           //printf("%x\n", currentRead[x]);
           fwrite((char*)currentRead + x, sizeof(char), 1, outputFile);
         }
-        //printCurrentRead(currentRead);
     }
 
+    printf("Finished decryption\n");
 
     fclose(inputFile);
     fclose(outputFile);
