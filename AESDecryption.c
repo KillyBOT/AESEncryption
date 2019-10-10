@@ -34,11 +34,11 @@ int main(int argc, char** argv){
     if(argc > 1) inputFile = fopen(argv[1],"r");
     else inputFile = fopen("Encrypted.txt","r");
 
-    if(argc > 2)outputFile = fopen(argv[2],"w+");
-    else outputFile = fopen("Decrypted.txt","w+");
-
-    if(argc > 3) keyFile = fopen(argv[3],"r");
+    if(argc > 2) keyFile = fopen(argv[2],"r");
     else keyFile = fopen("key.txt", "r");
+
+    if(argc > 3)outputFile = fopen(argv[3],"w+");
+    else outputFile = fopen("Decrypted.txt","w+");
 
     if(argc > 4)outputFileHex = fopen(argv[4],"w+");
     else outputFileHex = fopen("DecryptedHex.txt","w+");
