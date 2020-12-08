@@ -59,17 +59,17 @@ int main(int argc, char** argv){
     while(keepRunning == 1){
         readSize = 0;
 
-        for(int x = 0; x < BLOCK_SIZE; x++){
-          currentRead[x] = 0;
-          if(keepRunning == 0){
-            if(x == BLOCK_SIZE - 1) *(currentRead + x) = readSize;
-            else *(currentRead + x) = 0;
-          } else {
-            readSize += fread(currentRead + x, sizeof(char), sizeof(word), inputFile);
-            if(readSize == 0 || readSize % sizeof(word) != 0) keepRunning = 0;
-          }
-          //printCurrentRead(currentRead);
+        memset(currentRead,0,BLOCK_SIZE*sizeof(word));
+
+        readSize = fread(currentRead,1,BLOCK_SIZE*sizeof(word),inputFile);
+        //printf("%d\n", readSize);
+        if(readSize != BLOCK_SIZE*sizeof(word)) {
+            ((char*)currentRead)[BLOCK_SIZE*sizeof(word) - 1] = (unsigned char)readSize;
+            keepRunning = 0;
         }
+
+        //printCurrentRead(currentRead);
+
 
         //Flip bytes, becuase fread is being annoying
         for(int x = 0; x < BLOCK_SIZE; x++) currentRead[x] = flipBytes(currentRead[x]);
@@ -108,7 +108,7 @@ int main(int argc, char** argv){
         //printCurrentRead(currentRead);
 
         for(int x = 0; x < BLOCK_SIZE; x++){
-          currentRead[x] = flipBytes(currentRead[x]);
+          //currentRead[x] = flipBytes(currentRead[x]);
           //printf("%x\n", *(currentRead + x));
           fwrite(currentRead + x, sizeof(word), 1, outputFile);
           writeWord(outputFileHex,currentRead[x]);

@@ -64,11 +64,11 @@ int main(int argc, char** argv){
 
     while(keepRunning == 1){
 
-        sizeOfRead = fread(currentRead, sizeof(word), BLOCK_SIZE, inputFile);
+        fread(currentRead, sizeof(word), BLOCK_SIZE, inputFile);
         //printCurrentRead(currentRead);
         //printf("%ld\n", ftell(inputFile));
 
-        for(int x = 0; x < BLOCK_SIZE; x++) currentRead[x] = flipBytes(currentRead[x]);
+       // for(int x = 0; x < BLOCK_SIZE; x++) currentRead[x] = flipBytes(currentRead[x]);
 
         for(int x = 0; x < BLOCK_SIZE; x++){
             currentRead[x] = currentRead[x] ^ roundKeys[40 + x];
@@ -108,29 +108,35 @@ int main(int argc, char** argv){
 
         //If you're asking about why I'm flipping the bits, it's because little and big endian is reeeeeally annoying
         //printCurrentRead(currentRead);
-        currentRead[BLOCK_SIZE - 1] = flipBytes(currentRead[BLOCK_SIZE - 1]);
+        //currentRead[BLOCK_SIZE - 1] = flipBytes(currentRead[BLOCK_SIZE - 1]);
+
 
         if(fgetc(inputFile) == EOF) {
-          finalSizeOfWrite = currentRead[BLOCK_SIZE - 1];
-          //printf("End of file reached\n");
-          keepRunning = 0;
-        } else fseek(inputFile, -1, SEEK_CUR);
-
-        currentRead[BLOCK_SIZE - 1] = flipBytes(currentRead[BLOCK_SIZE - 1]);
-
+            currentRead[BLOCK_SIZE - 1] = flipBytes(currentRead[BLOCK_SIZE - 1]);
+            finalSizeOfWrite = ((char*)currentRead)[BLOCK_SIZE*sizeof(word) - 1];
+            currentRead[BLOCK_SIZE - 1] = flipBytes(currentRead[BLOCK_SIZE - 1]);
+            
+            keepRunning = 0;
+        } else {
+            fseek(inputFile, -1, SEEK_CUR);
+            //currentRead[BLOCK_SIZE - 1] = flipBytes(currentRead[BLOCK_SIZE - 1]);
+        }
         hexChars = finalSizeOfWrite;
 
+
+
         for(int x = 0; x < BLOCK_SIZE; x++){
-          if(hexChars < BLOCK_SIZE && hexChars > 0) writeWordN(outputFileHex, currentRead[x], hexChars);
-          else if( hexChars > 0) writeWord(outputFileHex, currentRead[x]);
-          currentRead[x] = flipBytes(currentRead[x]);
-          hexChars -= BLOCK_SIZE;
+            if(hexChars < BLOCK_SIZE && hexChars > 0) writeWordN(outputFileHex, currentRead[x], hexChars);
+            else if( hexChars > 0) writeWord(outputFileHex, currentRead[x]);
+            hexChars -= BLOCK_SIZE;
+            currentRead[x] = flipBytes(currentRead[x]);
+
         }
 
-        for(int x = 0; x < finalSizeOfWrite; x++){
-          //printf("%x\n", currentRead[x]);
-          fwrite((char*)currentRead + x, sizeof(char), 1, outputFile);
-        }
+        //printCurrentRead(currentRead);
+        //printf("%d\n", finalSizeOfWrite);
+
+        fwrite((char*)currentRead, 1, finalSizeOfWrite, outputFile);
     }
 
     printf("Finished decryption\n");
